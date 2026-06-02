@@ -80,6 +80,9 @@ export interface SupplierOption {
   status: string | null;
   city: string | null;
   state: string | null;
+  phone: string | null;
+  bank_account_holder_name: string | null;
+  bank_account_number: string | null;
 }
 
 export interface Project {

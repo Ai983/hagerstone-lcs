@@ -55,13 +55,20 @@ export default function Contractors() {
     setForm((f) => ({
       ...f,
       name: s.name ?? "",
+      phone: s.phone ?? f.phone,
       gstin: s.gstin ?? "",
       pan: s.pan ?? "",
       bank_name: s.bank_name ?? "",
+      bank_account_holder_name: s.bank_account_holder_name ?? "",
+      bank_account_number: s.bank_account_number ?? "",
       bank_ifsc: s.bank_ifsc ?? "",
     }));
     setSupplierTerm("");
   };
+
+  // Lock a field only when the linked supplier actually has that value;
+  // suppliers with no bank/contact data stay editable so they can be completed.
+  const locked = (val: string | null | undefined) => linked && !!val && !!String(val).trim();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,19 +178,19 @@ export default function Contractors() {
                   )}
                   <div className="space-y-1.5">
                     <Label>Name *</Label>
-                    <Input value={form.name} disabled={linked} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sharma Civil Works" />
+                    <Input value={form.name} disabled={locked(linkedSupplier?.name)} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sharma Civil Works" />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Phone *</Label>
-                    <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Input value={form.phone} disabled={locked(linkedSupplier?.phone)} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>GSTIN</Label>
-                    <Input value={form.gstin} disabled={linked} onChange={(e) => setForm({ ...form, gstin: e.target.value })} />
+                    <Input value={form.gstin} disabled={locked(linkedSupplier?.gstin)} onChange={(e) => setForm({ ...form, gstin: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>PAN</Label>
-                    <Input value={form.pan} disabled={linked} onChange={(e) => setForm({ ...form, pan: e.target.value })} />
+                    <Input value={form.pan} disabled={locked(linkedSupplier?.pan)} onChange={(e) => setForm({ ...form, pan: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Default retention %</Label>
@@ -193,23 +200,23 @@ export default function Contractors() {
 
                 {/* Bank details + human verification gate */}
                 <div className="rounded-md border border-border p-3 space-y-4">
-                  {linked && <p className="text-xs text-muted-foreground">Bank name & IFSC auto-filled from the linked supplier. Enter the full account number (CPS stores only the last 4).</p>}
+                  {linked && <p className="text-xs text-muted-foreground">Auto-filled from the linked supplier where CPS has the data; complete any blank fields. A human must still tick "verified".</p>}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label>Bank name *</Label>
-                      <Input value={form.bank_name} disabled={linked} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
+                      <Input value={form.bank_name} disabled={locked(linkedSupplier?.bank_name)} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Account holder *</Label>
-                      <Input value={form.bank_account_holder_name} onChange={(e) => setForm({ ...form, bank_account_holder_name: e.target.value })} />
+                      <Input value={form.bank_account_holder_name} disabled={locked(linkedSupplier?.bank_account_holder_name)} onChange={(e) => setForm({ ...form, bank_account_holder_name: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Account number *</Label>
-                      <Input value={form.bank_account_number} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
+                      <Input value={form.bank_account_number} disabled={locked(linkedSupplier?.bank_account_number)} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>IFSC *</Label>
-                      <Input value={form.bank_ifsc} disabled={linked} onChange={(e) => setForm({ ...form, bank_ifsc: e.target.value })} />
+                      <Input value={form.bank_ifsc} disabled={locked(linkedSupplier?.bank_ifsc)} onChange={(e) => setForm({ ...form, bank_ifsc: e.target.value })} />
                     </div>
                   </div>
                   <label className="flex items-center gap-2 text-sm">

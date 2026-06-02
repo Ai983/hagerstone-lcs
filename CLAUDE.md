@@ -17,7 +17,7 @@ Two payment tracks: **A — Measured** (agency/sub-contractors, RA bills at lock
 - **All new objects go in `lcs` only.** Never create in public/cps/finance.
 - **Read-only** (never alter/drop/rewrite): `cps.cps_suppliers` (759 rows), `public.employees`, `public.roles`, `public.employee_module_access`.
 - **Only allowed shared write:** additive module-access rows — add `'lcs'` to roles' `default_modules` + insert `employee_module_access` rows. Done in `lcs_002`.
-- ✅ **`lcs` schema is exposed to the API** (Dashboard → Settings → API → Exposed schemas — confirmed "5 of 6 schemas exposed", `lcs` ✓, 2026-06-02).
+- ✅ **`lcs` schema is exposed to the API.** ⚠️ The Dashboard → Settings → API → Exposed schemas toggle did **NOT persist** on this shared project (checking `lcs` + Save left the stored value as `public, finance, cps, facade`). Verified via REST (`PGRST106 Invalid schema: lcs`) and `select rolconfig from pg_roles where rolname='authenticator'`. **Fixed by setting it directly:** `alter role authenticator set pgrst.db_schemas = 'public, finance, cps, facade, lcs';` then `notify pgrst, 'reload config'; notify pgrst, 'reload schema';` (2026-06-03). This is shared infra — change is **additive** (preserves cps/finance/facade/public). **If lcs API ever returns PGRST106 again** (another team re-saves exposed schemas and clobbers it), re-run that ALTER ROLE + NOTIFY. Always verify exposure with a REST curl (`Accept-Profile: lcs`), NOT just `set role` in SQL (that bypasses PostgREST).
 
 ### Shared helpers (read/reuse, don't duplicate)
 - `public.get_my_role()` → role from employees by `auth_user_id`.
