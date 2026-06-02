@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(find /Users/aniketawasthi/hagerstone-cps/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) | grep -E \"\\(auth|supabase|callback\\)\" | head -20)",
+      "Read(//Users/aniketawasthi/hagerstone-cps/src/**)",
+      "Bash(find /Users/aniketawasthi/hagerstone-cps -maxdepth 2 -name \".env*\" -o -name \"*.example*\")",
+      "Read(//Users/aniketawasthi/hagerstone-cps/**)"
+    ]
+  }
+}
