@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
+import { QueryClient, QueryCache, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster, toast } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
@@ -11,6 +11,17 @@ import Projects from "@/pages/Projects";
 import WorkOrders from "@/pages/WorkOrders";
 
 const queryClient = new QueryClient({
+  // Surface query failures instead of silently rendering "empty". The most
+  // common one is PGRST106 (schema not exposed) — make that actionable.
+  queryCache: new QueryCache({
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : "Request failed";
+      const friendly = /invalid schema|PGRST106/i.test(msg)
+        ? "LCS database isn't reachable: the 'lcs' schema is not exposed to the API. An admin must enable it in Supabase → Settings → API → Exposed schemas."
+        : msg;
+      toast.error(friendly, { id: "query-error" });
+    },
+  }),
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
 });
 
