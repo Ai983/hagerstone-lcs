@@ -53,7 +53,12 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 
 **Tables:** `lcs_config`, `contractor_profiles`, `projects`, `project_assignments`, `work_orders`, `wo_boq_items`, `workers`, `attendance`, `attendance_lines`, `site_evidence`, `dpr_entries`. **Views:** `v_contractors`, `v_cps_suppliers`, `v_cps_projects`. **Storage:** bucket `lcs-evidence` (private).
 
-**Labour model (decided):** mix of **B = thekedar** (we pay the contractor; gang roster optional) and **C = direct** (we pay each worker; roster used for man-days × day_rate). Set via `contractor_profiles.labour_engagement`.
+- `lcs_009_worker_payment` — per-worker payment on `workers`: `payment_mode` (cash|upi|bank_transfer), `upi_id`, `bank_*`, `payment_verified`. `contractor_profiles.payment_mode` added. **WO bank-gate relaxed for DIRECT labour** (`enforce_wo_bank_verified` returns early when type='labour' & engagement='direct' — no group account; verification is per-worker at pay time).
+
+**Labour model (decided):** mix of **B = thekedar** and **C = direct**, via `contractor_profiles.labour_engagement`.
+- **Thekedar/Agency:** we pay the GROUP → group bank details required + human "verified" tick on onboarding; workers added later (expand panel) are attendance-only.
+- **Direct:** we pay EACH WORKER → onboarding form has NO group bank; instead capture each worker inline with `payment_mode` cash/UPI/bank + details + per-worker "verified". Group `bank_verified` stays false and the WO gate is exempt for direct. More workers can be added later via the expand panel (also with payment fields).
+- Payment modes everywhere: **cash / UPI / bank_transfer** (PRD's tamper-proof record — capture HOW each person is paid).
 
 ## Phase checklist (PRD §13)
 - [x] **Phase 0** — Re-verify Hub; `lcs` schema; `lcs_config`; numbering fns; RLS helpers. *(schema exposure = pending user)*
