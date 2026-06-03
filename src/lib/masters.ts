@@ -159,6 +159,21 @@ export function useWorkers(contractorId: string | null) {
   });
 }
 
+export function useCreateWorkersBulk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ contractorId, rows }: { contractorId: string; rows: Record<string, unknown>[] }) => {
+      if (!rows.length) return;
+      const { error } = await supabaseLcs.from("workers").insert(rows);
+      if (error) throw error;
+      return contractorId;
+    },
+    onSuccess: (contractorId) => {
+      if (contractorId) qc.invalidateQueries({ queryKey: ["workers", contractorId] });
+    },
+  });
+}
+
 export function useCreateWorker() {
   const qc = useQueryClient();
   return useMutation({

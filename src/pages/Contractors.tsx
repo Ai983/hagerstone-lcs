@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { WorkersPanel } from "@/components/WorkersPanel";
+import { WorkerFields } from "@/components/WorkerFields";
 import { useAuth } from "@/contexts/AuthContext";
-import { useContractors, useCreateContractor, useSupplierSearch } from "@/lib/masters";
-import { canManageOps, type ContractorType, type LabourEngagement, type SupplierOption } from "@/types";
+import { useContractors, useCreateContractor, useCreateWorkersBulk, useSupplierSearch } from "@/lib/masters";
+import {
+  canManageOps,
+  emptyWorkerDraft,
+  validateWorkerDraft,
+  workerDraftToRow,
+  type ContractorType,
+  type LabourEngagement,
+  type SupplierOption,
+  type WorkerDraft,
+} from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +43,7 @@ export default function Contractors() {
   const canManage = canManageOps(role);
   const { data: contractors = [], isLoading } = useContractors();
   const create = useCreateContractor();
+  const bulkWorkers = useCreateWorkersBulk();
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...empty });
@@ -40,13 +51,17 @@ export default function Contractors() {
   const [supplierTerm, setSupplierTerm] = useState("");
   const { data: supplierResults = [], isFetching } = useSupplierSearch(supplierTerm);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [directWorkers, setDirectWorkers] = useState<WorkerDraft[]>([emptyWorkerDraft()]);
 
   const linked = !!linkedSupplier;
+  // Direct labour is paid per worker → capture workers here, not a group bank account.
+  const isDirect = form.type === "labour" && form.labour_engagement === "direct";
 
   const reset = () => {
     setForm({ ...empty });
     setLinkedSupplier(null);
     setSupplierTerm("");
+    setDirectWorkers([emptyWorkerDraft()]);
     setOpen(false);
   };
 
@@ -72,20 +87,32 @@ export default function Contractors() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mandatory fields (so we can actually identify + pay the contractor).
     const missing: string[] = [];
-    if (!form.name.trim()) missing.push("name");
+    if (!form.name.trim()) missing.push("group/contractor name");
     if (!form.phone.trim()) missing.push("phone");
-    if (!form.bank_name.trim()) missing.push("bank name");
-    if (!form.bank_account_holder_name.trim()) missing.push("account holder");
-    if (!form.bank_account_number.trim()) missing.push("account number");
-    if (!form.bank_ifsc.trim()) missing.push("IFSC");
+
+    if (isDirect) {
+      // No group bank account; require at least one valid worker with payment details.
+      const filled = directWorkers.filter((w) => w.name.trim());
+      if (filled.length === 0) missing.push("at least one worker");
+      for (const w of filled) {
+        const bad = validateWorkerDraft(w);
+        if (bad) missing.push(`${w.name || "worker"} → ${bad}`);
+      }
+    } else {
+      // Agency / thekedar: we pay the group, so its bank details are required.
+      if (!form.bank_name.trim()) missing.push("bank name");
+      if (!form.bank_account_holder_name.trim()) missing.push("account holder");
+      if (!form.bank_account_number.trim()) missing.push("account number");
+      if (!form.bank_ifsc.trim()) missing.push("IFSC");
+    }
     if (missing.length) {
       toast.error(`Please fill: ${missing.join(", ")}`);
       return;
     }
+
     try {
-      await create.mutateAsync({
+      const created = await create.mutateAsync({
         type: form.type,
         labour_engagement: form.type === "labour" ? form.labour_engagement : null,
         supplier_ref: linkedSupplier?.id ?? null,
@@ -93,16 +120,25 @@ export default function Contractors() {
         phone: form.phone.trim() || null,
         gstin: form.gstin.trim() || null,
         pan: form.pan.trim() || null,
-        bank_name: form.bank_name.trim() || null,
-        bank_account_number: form.bank_account_number.trim() || null,
-        bank_account_holder_name: form.bank_account_holder_name.trim() || null,
-        bank_ifsc: form.bank_ifsc.trim() || null,
+        // group bank only meaningful for agency/thekedar
+        bank_name: isDirect ? null : form.bank_name.trim() || null,
+        bank_account_number: isDirect ? null : form.bank_account_number.trim() || null,
+        bank_account_holder_name: isDirect ? null : form.bank_account_holder_name.trim() || null,
+        bank_ifsc: isDirect ? null : form.bank_ifsc.trim() || null,
         default_retention_pct: Number(form.default_retention_pct) || 0,
-        bank_verified: form.bank_verified,
-        kyc_status: form.bank_verified ? "verified" : "pending",
+        bank_verified: isDirect ? false : form.bank_verified,
+        kyc_status: !isDirect && form.bank_verified ? "verified" : "pending",
         created_by: employee?.id ?? null,
       });
-      toast.success("Contractor onboarded");
+
+      if (isDirect) {
+        const rows = directWorkers
+          .filter((w) => w.name.trim())
+          .map((w) => workerDraftToRow(w, created.id, employee?.id ?? null));
+        await bulkWorkers.mutateAsync({ contractorId: created.id, rows });
+      }
+
+      toast.success(isDirect ? "Labour group + workers onboarded" : "Contractor onboarded");
       reset();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not save contractor");
@@ -198,33 +234,61 @@ export default function Contractors() {
                   </div>
                 </div>
 
-                {/* Bank details + human verification gate */}
-                <div className="rounded-md border border-border p-3 space-y-4">
-                  {linked && <p className="text-xs text-muted-foreground">Auto-filled from the linked supplier where CPS has the data; complete any blank fields. A human must still tick "verified".</p>}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Bank name *</Label>
-                      <Input value={form.bank_name} disabled={locked(linkedSupplier?.bank_name)} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
+                {/* Agency / thekedar: we pay the GROUP → group bank details + verify */}
+                {!isDirect && (
+                  <div className="rounded-md border border-border p-3 space-y-4">
+                    {linked && <p className="text-xs text-muted-foreground">Auto-filled from the linked supplier where CPS has the data; complete any blank fields. A human must still tick "verified".</p>}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Bank name *</Label>
+                        <Input value={form.bank_name} disabled={locked(linkedSupplier?.bank_name)} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Account holder *</Label>
+                        <Input value={form.bank_account_holder_name} disabled={locked(linkedSupplier?.bank_account_holder_name)} onChange={(e) => setForm({ ...form, bank_account_holder_name: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Account number *</Label>
+                        <Input value={form.bank_account_number} disabled={locked(linkedSupplier?.bank_account_number)} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>IFSC *</Label>
+                        <Input value={form.bank_ifsc} disabled={locked(linkedSupplier?.bank_ifsc)} onChange={(e) => setForm({ ...form, bank_ifsc: e.target.value })} />
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Account holder *</Label>
-                      <Input value={form.bank_account_holder_name} disabled={locked(linkedSupplier?.bank_account_holder_name)} onChange={(e) => setForm({ ...form, bank_account_holder_name: e.target.value })} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Account number *</Label>
-                      <Input value={form.bank_account_number} disabled={locked(linkedSupplier?.bank_account_number)} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>IFSC *</Label>
-                      <Input value={form.bank_ifsc} disabled={locked(linkedSupplier?.bank_ifsc)} onChange={(e) => setForm({ ...form, bank_ifsc: e.target.value })} />
-                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={form.bank_verified} onChange={(e) => setForm({ ...form, bank_verified: e.target.checked })} className="h-4 w-4" />
+                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                      Bank details verified by a human (required before any work order)
+                    </label>
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.bank_verified} onChange={(e) => setForm({ ...form, bank_verified: e.target.checked })} className="h-4 w-4" />
-                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    Bank details verified by a human (required before any work order)
-                  </label>
-                </div>
+                )}
+
+                {/* Direct labour: we pay EACH WORKER → capture workers + their payment here */}
+                {isDirect && (
+                  <div className="rounded-md border border-border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Workers (paid individually — cash / UPI / bank)</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setDirectWorkers([...directWorkers, emptyWorkerDraft()])}>
+                        <Plus className="h-3.5 w-3.5" /> Add worker
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">No group bank account — each worker is paid directly. Tick "verified" per worker once their payment detail is checked.</p>
+                    {directWorkers.map((w, i) => (
+                      <div key={i} className="rounded-md border border-border/60 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">Worker {i + 1}</span>
+                          {directWorkers.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDirectWorkers(directWorkers.filter((_, j) => j !== i))}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <WorkerFields value={w} onChange={(next) => setDirectWorkers(directWorkers.map((x, j) => (j === i ? next : x)))} />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={create.isPending}>
@@ -248,6 +312,7 @@ export default function Contractors() {
               <div className="divide-y divide-border">
                 {contractors.map((c) => {
                   const isLabour = c.type === "labour";
+                  const isDirectRow = isLabour && c.labour_engagement === "direct";
                   const isOpen = expanded === c.id;
                   return (
                     <div key={c.id} className="px-5 py-3">
@@ -269,7 +334,13 @@ export default function Contractors() {
                         </button>
                         <div className="flex items-center gap-2 shrink-0">
                           {isLabour && <Badge variant="outline"><Users className="h-3 w-3 mr-1" />workers</Badge>}
-                          {c.bank_verified ? <Badge variant="success">Bank verified</Badge> : <Badge variant="warning">Bank unverified</Badge>}
+                          {isDirectRow ? (
+                            <Badge variant="secondary">direct · pays workers</Badge>
+                          ) : c.bank_verified ? (
+                            <Badge variant="success">Bank verified</Badge>
+                          ) : (
+                            <Badge variant="warning">Bank unverified</Badge>
+                          )}
                           <Badge variant="outline">{c.status}</Badge>
                         </div>
                       </div>

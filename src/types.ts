@@ -50,6 +50,7 @@ export interface ContractorProfile {
   default_retention_pct: number;
   performance_score: number | null;
   status: "active" | "inactive" | "blacklisted";
+  payment_mode: PaymentMode;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -128,6 +129,8 @@ export interface BoqItem {
 }
 
 /** Roles allowed to manage each master (mirrors lcs RLS write policies). */
+export type PaymentMode = "cash" | "upi" | "bank_transfer";
+
 export interface Worker {
   id: string;
   contractor_profile_id: string;
@@ -137,9 +140,66 @@ export interface Worker {
   day_rate: number;
   aadhaar_last4: string | null;
   is_active: boolean;
+  payment_mode: PaymentMode;
+  upi_id: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_ifsc: string | null;
+  bank_account_holder_name: string | null;
+  payment_verified: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Editable worker draft used in onboarding (direct) and the workers panel. */
+export interface WorkerDraft {
+  name: string;
+  phone: string;
+  skill: string;
+  day_rate: string;
+  payment_mode: PaymentMode;
+  upi_id: string;
+  bank_name: string;
+  bank_account_number: string;
+  bank_ifsc: string;
+  bank_account_holder_name: string;
+  payment_verified: boolean;
+}
+
+export const emptyWorkerDraft = (): WorkerDraft => ({
+  name: "", phone: "", skill: "", day_rate: "",
+  payment_mode: "cash", upi_id: "",
+  bank_name: "", bank_account_number: "", bank_ifsc: "", bank_account_holder_name: "",
+  payment_verified: false,
+});
+
+/** Validate a worker draft's payment details by mode. Returns an error string or null. */
+export function validateWorkerDraft(w: WorkerDraft): string | null {
+  if (!w.name.trim()) return "worker name";
+  if (w.payment_mode === "upi" && !w.upi_id.trim()) return "UPI ID";
+  if (w.payment_mode === "bank_transfer" && (!w.bank_account_number.trim() || !w.bank_ifsc.trim()))
+    return "bank account + IFSC";
+  return null;
+}
+
+/** Map a draft to a workers-table insert payload. */
+export function workerDraftToRow(w: WorkerDraft, contractorId: string, createdBy: string | null) {
+  return {
+    contractor_profile_id: contractorId,
+    name: w.name.trim(),
+    phone: w.phone.trim() || null,
+    skill: w.skill.trim() || null,
+    day_rate: Number(w.day_rate) || 0,
+    payment_mode: w.payment_mode,
+    upi_id: w.upi_id.trim() || null,
+    bank_name: w.bank_name.trim() || null,
+    bank_account_number: w.bank_account_number.trim() || null,
+    bank_ifsc: w.bank_ifsc.trim() || null,
+    bank_account_holder_name: w.bank_account_holder_name.trim() || null,
+    payment_verified: w.payment_verified,
+    created_by: createdBy,
+  };
 }
 
 /** lcs.v_cps_projects — read-only CPS project directory for the import picker. */
