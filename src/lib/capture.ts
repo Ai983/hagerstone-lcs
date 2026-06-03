@@ -143,6 +143,24 @@ export function useTodayEvidence(projectId: string | null, sinceIso: string) {
   });
 }
 
+/** Recent evidence for a project (any date) — used by the Confirmations queue. */
+export function useProjectEvidence(projectId: string | null, limit = 50) {
+  return useQuery({
+    queryKey: ["project_evidence", projectId],
+    enabled: !!projectId,
+    queryFn: async (): Promise<SiteEvidenceRow[]> => {
+      const { data, error } = await supabaseLcs
+        .from("site_evidence")
+        .select("*")
+        .eq("project_id", projectId as string)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as SiteEvidenceRow[];
+    },
+  });
+}
+
 export function useUploadEvidence() {
   const qc = useQueryClient();
   return useMutation({

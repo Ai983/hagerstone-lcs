@@ -16,8 +16,11 @@ import {
   HardHat,
 } from "lucide-react";
 
-/** Live field capture (Phase 3) + masters (Phase 2). */
-const FIELD = [{ to: "/capture", label: "Capture", icon: Camera }] as const;
+/** Live field capture (Phase 3) + confirmations (Phase 4) + masters (Phase 2). */
+const FIELD = [
+  { to: "/capture", label: "Capture", icon: Camera },
+  { to: "/confirmations", label: "Confirmations", icon: CheckCircle2 },
+] as const;
 const MASTERS = [
   { to: "/contractors", label: "Contractors", icon: Users },
   { to: "/projects", label: "Projects", icon: Building2 },
@@ -28,7 +31,6 @@ const BOTTOM = [{ to: "/capture", label: "Capture", icon: Camera }, ...MASTERS] 
 
 /** Workflow sections — wired in later phases. */
 const SOON = [
-  { key: "confirmations", label: "Confirmations", icon: CheckCircle2, hint: "AI-checked items to confirm (Phase 4)" },
   { key: "billing", label: "Billing", icon: ReceiptText, hint: "RA bills & wage sheets (Phase 5)" },
   { key: "approvals", label: "Approvals", icon: Stamp, hint: "Approval matrix (Phase 7)" },
   { key: "dashboards", label: "Dashboards", icon: LayoutDashboard, hint: "Role dashboards (Phase 9)" },
