@@ -54,6 +54,10 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 - `lcs_010_ai_checks` — `ai_checks` table (entity/entity_id, gate G1|G2|attendance, result jsonb, confidence, confidence_reason, flags[], passed, model, human_corrected, confirmed_by/at) + RLS + grants. Written by the Edge Function (service role); humans confirm/flag from the app.
 
 **Tables:** `lcs_config`, `contractor_profiles`, `projects`, `project_assignments`, `work_orders`, `wo_boq_items`, `workers`, `attendance`, `attendance_lines`, `site_evidence`, `dpr_entries`, `ai_checks`. **Views:** `v_contractors`, `v_cps_suppliers`, `v_cps_projects`. **Storage:** bucket `lcs-evidence` (private).
+- `lcs_011_billing` — Track A: `measurements` (locked MB), `ra_bills` (per-WO `ra_no` via `set_ra_no` trigger; `gross`/`cumulative`/`pct_utilised`), `ra_bill_items`. Track B: `wage_sheets` (`wage_no` default), `wage_sheet_lines` (per-worker for direct). **Cumulative-ceiling trigger `enforce_ra_ceiling`** blocks any RA bill whose cumulative > `work_orders.wo_value`. RLS (read=lcs user; write=ops+pm+site_engineer) + grants.
+
+**Tables (add to list above):** `measurements`, `ra_bills`, `ra_bill_items`, `wage_sheets`, `wage_sheet_lines`.
+
 **Edge Function:** `lcs-ai-check` (ACTIVE, `verify_jwt: true`) — the ONLY server-side code. Routes by `gate` (attendance = muster headcount; G1 = photo↔claim; G2 = measurement OCR), reads the evidence image from `lcs-evidence` via the service role, calls Claude **`claude-sonnet-4-6`** (vision), records `ai_checks`. **Key is server-side** (Supabase secret `ANTHROPIC_API_KEY` — already set on the project; SUPABASE_* injected automatically). Source: `supabase/functions/lcs-ai-check/index.ts`. NEVER call Claude from the browser. Threshold from `lcs_config.ai_confidence_threshold` (70); `passed` = confidence≥threshold AND no flags.
 
 - `lcs_009_worker_payment` — per-worker payment on `workers`: `payment_mode` (cash|upi|bank_transfer), `upi_id`, `bank_*`, `payment_verified`. `contractor_profiles.payment_mode` added. **WO bank-gate relaxed for DIRECT labour** (`enforce_wo_bank_verified` returns early when type='labour' & engagement='direct' — no group account; verification is per-worker at pay time).
@@ -69,7 +73,7 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 - [x] **Phase 2** — DONE. Masters live: contractor_profiles (+ optional supplier link via `v_contractors`), projects, project_assignments, work_orders, wo_boq_items. Onboarding with bank-verification gate (DB trigger blocks WO for unverified contractor). UI: Contractors / Projects / Work Orders pages (deployed). Round-trip verified live.
 - [x] **Phase 3** — DONE. Mobile Capture screen (attendance: headcount for thekedar / per-worker muster for direct; site photo upload to `lcs-evidence` with geo+timestamp; daily progress report). Project staff assignment UI. Capture scoped via `project_assignments` (managers see all). Deployed.
 - [x] **Phase 4** — DONE. `lcs-ai-check` Edge Function (server-side Claude vision `claude-sonnet-4-6`, key never in browser) + `ai_checks` + **Confirmations** UI (run per-gate check on a photo → ✓ checked / ⚠ needs a look → human Confirm/Flag). Deployed; `ANTHROPIC_API_KEY` present. Live Claude test pending a captured photo.
-- [ ] Phase 5 — Billing: ra_bills/items, wage_sheets, ceiling, contractor portal token.
+- [~] **Phase 5** — Billing core DONE: RA bills from locked BOQ rates with hard cumulative ceiling (≤ WO value) + Measurement Book; wage sheets from confirmed attendance (per-worker for direct, gang for thekedar). Billing UI (RA tab w/ live ceiling bar + Wage tab). Deployed. **Pending sub-item:** contractor portal token (tokenised RA-bill upload, reuse CPS vendor-portal pattern).
 - [ ] Phase 6 — Deduction engine + ledgers.
 - [ ] Phase 7 — Gate pipeline + approval matrix + escalations + holds.
 - [ ] Phase 8 — Payment + UTR + payslip; retention tranches + DLP tracker.
