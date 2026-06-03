@@ -47,7 +47,11 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 
 - `lcs_005_workers_labour_mode` — `contractor_profiles.labour_engagement` (`thekedar`|`direct`, for type='labour'); new `workers` table (per-worker registry for labour model B+C: name, phone, skill, day_rate, aadhaar_last4) + RLS (read=lcs user; write=ops + site_engineer/project_manager) + grants; `v_cps_projects` read-only view over `cps.cps_projects` for the import picker.
 
-**Tables:** `lcs_config`, `contractor_profiles`, `projects`, `project_assignments`, `work_orders`, `wo_boq_items`, `workers`. **Views:** `v_contractors`, `v_cps_suppliers`, `v_cps_projects`.
+- `lcs_006_expand_supplier_view` — `v_cps_suppliers` extended with `phone`, `bank_account_holder_name`, `bank_account_number` (so the contractor form auto-fills them); `anon` SELECT revoked from the view (bank data → authenticated only). NB: across 760 CPS suppliers only ~38 have any bank details; `bank_account_last4` is unused/empty.
+- `lcs_007_capture` — Phase 3 capture: `attendance` (header muster: project, contractor, work_date, headcount, man_days, evidence_path, source, confirmed_*), `attendance_lines` (per-worker for DIRECT labour: worker_id, present, man_day, day_rate snapshot), `site_evidence` (project/WO, kind, file_path, geo_lat/lng, taken_at, note), `dpr_entries` (daily progress); helpers `lcs.my_employee_id()` + `lcs.can_capture_for(project)` (managers anywhere, field staff only for assigned projects); RLS on all 4; grants.
+- `lcs_008_evidence_bucket` — private Storage bucket `lcs-evidence` + `storage.objects` policies scoped to `bucket_id='lcs-evidence'` AND `lcs.is_lcs_user()` (read/insert/update for authenticated). Files stored at `{project_id}/{ts}_{name}`; viewed via signed URLs.
+
+**Tables:** `lcs_config`, `contractor_profiles`, `projects`, `project_assignments`, `work_orders`, `wo_boq_items`, `workers`, `attendance`, `attendance_lines`, `site_evidence`, `dpr_entries`. **Views:** `v_contractors`, `v_cps_suppliers`, `v_cps_projects`. **Storage:** bucket `lcs-evidence` (private).
 
 **Labour model (decided):** mix of **B = thekedar** (we pay the contractor; gang roster optional) and **C = direct** (we pay each worker; roster used for man-days × day_rate). Set via `contractor_profiles.labour_engagement`.
 
@@ -55,7 +59,7 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 - [x] **Phase 0** — Re-verify Hub; `lcs` schema; `lcs_config`; numbering fns; RLS helpers. *(schema exposure = pending user)*
 - [x] **Phase 1** — DONE. App built + deployed (https://hagerstone-lcs.vercel.app), gating live, `lcs` schema exposed, Hub tile registered + **Hub redeployed** (commit `c0307f3` → Vercel deployment READY). LCS tile is live on the Hub for LCS-enabled users.
 - [x] **Phase 2** — DONE. Masters live: contractor_profiles (+ optional supplier link via `v_contractors`), projects, project_assignments, work_orders, wo_boq_items. Onboarding with bank-verification gate (DB trigger blocks WO for unverified contractor). UI: Contractors / Projects / Work Orders pages (deployed). Round-trip verified live.
-- [ ] Phase 3 — Mobile capture: attendance, site_evidence, dpr; storage bucket `lcs-evidence`.
+- [x] **Phase 3** — DONE. Mobile Capture screen (attendance: headcount for thekedar / per-worker muster for direct; site photo upload to `lcs-evidence` with geo+timestamp; daily progress report). Project staff assignment UI. Capture scoped via `project_assignments` (managers see all). Deployed.
 - [ ] Phase 4 — Edge Function `lcs-ai-check` + per-gate checkers + `ai_checks` + confirm UI.
 - [ ] Phase 5 — Billing: ra_bills/items, wage_sheets, ceiling, contractor portal token.
 - [ ] Phase 6 — Deduction engine + ledgers.
