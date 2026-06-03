@@ -16,16 +16,18 @@ import {
   HardHat,
 } from "lucide-react";
 
-/** Live Phase 2 masters. */
+/** Live field capture (Phase 3) + masters (Phase 2). */
+const FIELD = [{ to: "/capture", label: "Capture", icon: Camera }] as const;
 const MASTERS = [
   { to: "/contractors", label: "Contractors", icon: Users },
   { to: "/projects", label: "Projects", icon: Building2 },
   { to: "/work-orders", label: "Work Orders", icon: FileText },
 ] as const;
+/** Live items shown in the mobile bottom-nav. */
+const BOTTOM = [{ to: "/capture", label: "Capture", icon: Camera }, ...MASTERS] as const;
 
 /** Workflow sections — wired in later phases. */
 const SOON = [
-  { key: "capture", label: "Capture", icon: Camera, hint: "Attendance & site evidence (Phase 3)" },
   { key: "confirmations", label: "Confirmations", icon: CheckCircle2, hint: "AI-checked items to confirm (Phase 4)" },
   { key: "billing", label: "Billing", icon: ReceiptText, hint: "RA bills & wage sheets (Phase 5)" },
   { key: "approvals", label: "Approvals", icon: Stamp, hint: "Approval matrix (Phase 7)" },
@@ -61,7 +63,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/40">Masters</div>
+          <div className="px-3 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/40">Field</div>
+          {FIELD.map((m) => (
+            <NavLink key={m.to} to={m.to} className={navItemCls}>
+              <m.icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">{m.label}</span>
+            </NavLink>
+          ))}
+          <div className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/40">Masters</div>
           {MASTERS.map((m) => (
             <NavLink key={m.to} to={m.to} className={navItemCls}>
               <m.icon className="h-4 w-4 shrink-0" />
@@ -111,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Bottom nav (mobile) — live masters */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 bg-sidebar text-sidebar-foreground border-t border-sidebar-border flex">
-          {MASTERS.map((m) => (
+          {BOTTOM.map((m) => (
             <NavLink
               key={m.to}
               to={m.to}

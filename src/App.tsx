@@ -9,6 +9,7 @@ import Home from "@/pages/Home";
 import Contractors from "@/pages/Contractors";
 import Projects from "@/pages/Projects";
 import WorkOrders from "@/pages/WorkOrders";
+import Capture from "@/pages/Capture";
 
 const queryClient = new QueryClient({
   // Surface query failures instead of silently rendering "empty". The most
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/contractors" element={<ProtectedRoute><Contractors /></ProtectedRoute>} />
             <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
             <Route path="/work-orders" element={<ProtectedRoute><WorkOrders /></ProtectedRoute>} />
+            <Route path="/capture" element={<ProtectedRoute><Capture /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

@@ -9,6 +9,7 @@ import {
   useImportProjects,
   useUpdateProject,
 } from "@/lib/masters";
+import { useProjectAssignments, useAssignStaff } from "@/lib/capture";
 import { canManageProjects } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,8 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, X, Loader2, DownloadCloud, Pencil, Check } from "lucide-react";
+import { Plus, X, Loader2, DownloadCloud, Pencil, Check, UserPlus } from "lucide-react";
+import type { EmployeeOption } from "@/lib/masters";
 
 const empty = { name: "", client: "", location: "", budget: "", design_pm_employee_id: "", project_head_employee_id: "" };
 
@@ -247,6 +249,9 @@ export default function Projects() {
                           </Select>
                         </div>
                         <div className="sm:col-span-2">
+                          <ProjectStaff projectId={p.id} employees={employees} />
+                        </div>
+                        <div className="sm:col-span-2">
                           <Button size="sm" variant="outline" onClick={() => setEditing(null)}><Check className="h-3.5 w-3.5" /> Done</Button>
                         </div>
                       </div>
@@ -259,5 +264,45 @@ export default function Projects() {
         </Card>
       </div>
     </AppShell>
+  );
+}
+
+// Assign field staff (site engineers / PMs) to a project so capture is scoped to them.
+function ProjectStaff({ projectId, employees }: { projectId: string; employees: EmployeeOption[] }) {
+  const { data: assignments = [] } = useProjectAssignments(projectId);
+  const assign = useAssignStaff();
+  const [empId, setEmpId] = useState("");
+
+  const fieldStaff = employees.filter((e) => ["site_engineer", "project_manager"].includes(e.role ?? ""));
+  const empName = (id: string) => employees.find((e) => e.id === id)?.name ?? id;
+  const assignedIds = new Set(assignments.map((a) => a.employee_id));
+
+  const add = async () => {
+    if (!empId) return toast.error("Pick a person");
+    try {
+      await assign.mutateAsync({ employee_id: empId, project_id: projectId, gate_roles: ["G1", "G2", "G3"] });
+      toast.success("Assigned to project");
+      setEmpId("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not assign");
+    }
+  };
+
+  return (
+    <div className="rounded-md border border-border bg-background p-3 space-y-2">
+      <Label className="text-xs flex items-center gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Field staff (can capture for this site)</Label>
+      {assignments.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {assignments.map((a) => <Badge key={a.id} variant="secondary">{empName(a.employee_id)}</Badge>)}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <Select value={empId} onChange={(e) => setEmpId(e.target.value)} className="flex-1">
+          <option value="">— Add site engineer / PM —</option>
+          {fieldStaff.filter((e) => !assignedIds.has(e.id)).map((e) => <option key={e.id} value={e.id}>{e.name} ({e.role})</option>)}
+        </Select>
+        <Button size="sm" variant="outline" onClick={add} disabled={assign.isPending}>Assign</Button>
+      </div>
+    </div>
   );
 }
