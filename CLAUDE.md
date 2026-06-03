@@ -102,6 +102,7 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 
 ## Workflow standard (every LCS prompt)
 Do the work → update this `CLAUDE.md` → write a new `/docs/sessions/<date>_<phase>.md` → update `/docs/sessions/INDEX.md` → report. Always, even if a prompt forgets to say so.
+**Do NOT update `docs/PROJECT_SUMMARY.md` per session** — it's a static one-off handout, not maintained going forward.
 
 ## Repos (local paths)
 - LCS (this): `/Users/aniketawasthi/Desktop/hagerstone-lcs`
