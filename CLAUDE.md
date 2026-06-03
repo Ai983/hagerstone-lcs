@@ -73,6 +73,9 @@ React 18 + TypeScript + Vite 5 · Tailwind v3 (brown `hsl(20 50% 35%)` / gold `h
 - [ ] Phase 9 — Role dashboards + spot-check queue + audit views.
 - [ ] Phase 10 — n8n + Maytapi notifications + director WhatsApp approval.
 
+## Design notes for upcoming phases
+- **Phase 7 approval matrix — resolve approvers dynamically, never hardcode.** The approval engine must look up each bill's approver from the project's **currently assigned PM / Project Head** (`projects.design_pm_employee_id` / `project_head_employee_id`, plus the role→level mapping) **at the moment of routing** — not from any baked-in name. Projects currently default PM/Head to "AI Team" for testing; real people get assigned after end-to-end testing. Because routing resolves from project assignments at runtime, that switch is a **pure data reassignment — no code change**. Also enforce **segregation of duties**: the approver must not be the same person who captured the work (cross-check against `attendance.created_by` / `site_evidence.uploaded_by`).
+
 ## Guardrails (do not violate)
 1. Re-verify live Hub state before each migration; live DB is truth.
 2. New objects in `lcs` only; expose `lcs` via API settings.

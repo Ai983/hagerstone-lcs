@@ -43,5 +43,8 @@
 - **Frontend:** new `WorkerFields` component (name/phone/skill/rate + payment mode + conditional UPI/bank + verify). Contractor onboarding: for direct, the group-bank block is replaced by an inline "Workers (paid individually)" list (add/remove, each with payment details); validation requires ≥1 valid worker instead of group bank; on save creates the group + bulk-inserts workers. WorkersPanel: direct uses `WorkerFields` for adding more later + shows payment mode/verified badges; thekedar keeps the simple attendance-only quick-add. Contractor list shows "direct · pays workers" instead of a bank badge for direct groups.
 - Deployed `5acaec0`.
 
+## Design note added (for Phase 7)
+- Recorded a forward-looking note in `CLAUDE.md` → "Design notes for upcoming phases": **Phase 7 approval matrix must resolve approvers dynamically** from the project's currently-assigned PM/Project Head + role→level mapping at routing time (never hardcoded). Projects default PM/Head to "AI Team" for testing; switching to real people is a pure data reassignment, no code change. Enforce segregation of duties — approver ≠ the person who captured the work.
+
 ## Next (Phase 4)
 Edge Function `lcs-ai-check` + per-gate AI checkers (G1 work-evidence, attendance man-day count from muster photo, G2 measurement) + `ai_checks` table + confirm UI. Key server-side (never browser). Confirm current vision-capable Claude model string from docs.claude.com first.
