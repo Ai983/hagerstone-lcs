@@ -2,7 +2,7 @@
 
 > **The one rule:** pay only for work actually done, at the agreed rate, confirmed by the right people, with a tamper-proof record. **AI checks, a named human confirms — AI never approves or pays.** When two options conflict, pick stronger verification + clearer audit trail.
 
-This file is the **always-current snapshot** of the project. Overwrite stale lines; don't append history. Full history → `/docs/sessions/`. Full spec → `LCS_PRD_FOR_CLAUDE_v1.1.md`.
+This file is the **always-current snapshot** of the project. Overwrite stale lines; don't append history. Consolidated build summary → `/docs/PROJECT_SUMMARY.md`. Full history → `/docs/sessions/`. Full spec → `LCS_PRD_FOR_CLAUDE_v1.1.md`.
 
 ---
 

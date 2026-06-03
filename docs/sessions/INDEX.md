@@ -1,7 +1,7 @@
 # LCS Session Log — Index
 
 Append-only history of every prompt that changed LCS. Newest at top. One line per session.
-Always-current state lives in `/CLAUDE.md`. Full spec in `/LCS_PRD_FOR_CLAUDE_v1.1.md`.
+Always-current state lives in `/CLAUDE.md`. Consolidated build summary in [`/docs/PROJECT_SUMMARY.md`](../PROJECT_SUMMARY.md). Full spec in `/LCS_PRD_FOR_CLAUDE_v1.1.md`.
 
 | Date | Phase | Session file | Summary |
 |---|---|---|---|
