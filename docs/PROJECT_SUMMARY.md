@@ -85,9 +85,9 @@ The **Labour & Contractor System** — governs every payment to every contractor
 New objects in `lcs` only; reads from cps/public; the only shared writes are additive (`lcs` module-access rows; the `authenticator` exposed-schemas setting — additive). Migrations numbered + idempotent + verified. No AI in browser (Edge Function comes in Phase 4). RLS on every table. Audit-log table is planned (PRD §9) for a later phase.
 
 ## 7. Phase checklist
-- [x] 0 Bootstrap · [x] 1 Auth + gating · [x] 2 Masters + WO · [x] 2.1 Polish · [x] 3 Capture · [x] 3.1 Direct-labour payment
-- [ ] **4 — `lcs-ai-check` Edge Function + per-gate AI checks + `ai_checks` + confirm UI** (next)
-- [ ] 5 Billing (RA bills, wage sheets, contractor portal) · [ ] 6 Deduction engine + ledgers · [ ] 7 Gate pipeline + approvals · [ ] 8 Payment + UTR + retention/DLP · [ ] 9 Dashboards + spot-check + audit views · [ ] 10 n8n + WhatsApp
+- [x] 0 Bootstrap · [x] 1 Auth + gating · [x] 2 Masters + WO · [x] 2.1 Polish · [x] 3 Capture · [x] 3.1 Direct-labour payment · [x] **4 AI check + confirm**
+- [ ] **5 — Billing (RA bills, wage sheets, ceiling, contractor portal)** (next)
+- [ ] 6 Deduction engine + ledgers · [ ] 7 Gate pipeline + approvals (dynamic approvers — see CLAUDE.md design note) · [ ] 8 Payment + UTR + retention/DLP · [ ] 9 Dashboards + spot-check + audit views · [ ] 10 n8n + WhatsApp
 
-## 8. Next (Phase 4)
-Edge Function `lcs-ai-check` (Claude key server-side, never browser) routing by gate; per-gate checkers (G1 work-evidence, attendance man-day count from muster photo, G2 measurement); `ai_checks` table; confirm UI (≥70% auto-fill+confirm, <70% editable+warning). Confirm the current vision-capable Claude model string from docs.claude.com first.
+## 8. Next (Phase 5)
+Billing: `ra_bills`/`ra_bill_items` (measured track, capped at WO value), `wage_sheets` (attendance track, man-days × rate), cumulative ceiling enforcement, contractor portal token (reuse CPS vendor-portal pattern). Wire the Phase-4 G2 measurement check → RA reconciliation and attendance → wage sheets.
